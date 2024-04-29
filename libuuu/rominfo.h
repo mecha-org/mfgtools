@@ -56,17 +56,19 @@ constexpr uint32_t ROM_INFO_HID_PACK_SIZE_1020 = 0x2000;
 constexpr uint32_t ROM_INFO_HID_SDP_NO_MAX_PER_TRANS = 0x4000;
 constexpr uint32_t ROM_INFO_AUTO_SCAN_UBOOT_POS = 0x8000;
 constexpr uint32_t ROM_INFO_HID_ROMAPI = 0x10000;
+constexpr uint32_t ROM_INFO_NEED_BAREBOX_FULL_IMAGE = 0x20000;
 
 struct ROM_INFO
 {
 	const char * m_name;
 	uint32_t    free_addr;
 	uint32_t	flags;
+	int serial_idx;
 };
 
 const ROM_INFO * search_rom_info(const std::string &s);
 const ROM_INFO * search_rom_info(const ConfigItem *item);
 
-size_t GetContainerActualSize(std::shared_ptr<DataBuffer> p, size_t offset, bool bROMAPI=false);
+size_t GetContainerActualSize(std::shared_ptr<DataBuffer> p, size_t offset, bool bROMAPI=false, bool skipspl=false);
 size_t GetFlashHeaderSize(std::shared_ptr<DataBuffer> p, size_t offset = 0);
 

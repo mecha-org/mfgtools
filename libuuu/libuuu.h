@@ -117,7 +117,7 @@ int uuu_for_each_cfg(uuu_show_cfg fn, void *p);
 typedef int(*uuu_ls_file)(const char *path, void *p);
 int uuu_for_each_ls_file(uuu_ls_file fn, const char *path, void *p);
 
-typedef int(*uuu_ls_usb_devices)(const char *path, const char *chip, const char *pro,  uint16_t vid, uint16_t pid, uint16_t bcd, void *p);
+typedef int(*uuu_ls_usb_devices)(const char *path, const char *chip, const char *pro,  uint16_t vid, uint16_t pid, uint16_t bcd, const char *serial_no, void *p);
 int uuu_for_each_devices(uuu_ls_usb_devices fn, void *p);
 
 EXT int uuu_run_cmd(const char * cmd, int dry);
@@ -126,6 +126,7 @@ int uuu_run_cmd_script(const char *script, int dry);
 int uuu_auto_detect_file(const char * filename);
 int uuu_wait_uuu_finish(int deamon, int dry);
 int uuu_add_usbpath_filter(const char *path);
+int uuu_add_usbserial_no_filter(const char *serial_no);
 
 /*Set timeout wait for known devices appeared*/
 int uuu_set_wait_timeout(int timeout_in_seconds);
@@ -147,5 +148,25 @@ void uuu_set_small_mem(uint32_t val);
 #define MAX_USER_LEN 128
 typedef int (*uuu_askpasswd)(char* prompt, char user[MAX_USER_LEN], char passwd[MAX_USER_LEN]);
 int uuu_set_askpasswd(uuu_askpasswd ask);
+
+enum class bmap_mode {
+	Default,
+	Force,
+	Ignore
+};
+
+/*Get .bmap handling mode*/
+static inline bmap_mode uuu_get_bmap_mode() {
+	extern bmap_mode g_bmap_mode;
+	return g_bmap_mode;
+}
+
+static inline int uuu_force_bmap() {
+	return uuu_get_bmap_mode() == bmap_mode::Force;
+}
+
+static inline int uuu_ignore_bmap() {
+	return uuu_get_bmap_mode() == bmap_mode::Ignore;
+}
 
 #endif

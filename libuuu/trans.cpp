@@ -30,6 +30,7 @@
 */
 
 #include "trans.h"
+#include "libcomm.h"
 #include "libuuu.h"
 #include "liberror.h"
 #include "libusb.h"
@@ -46,6 +47,44 @@ TransBase::~TransBase()
 {
 }
 
+int TransBase::write(void *buff, size_t size)
+{
+	int ret;
+
+	for (int retry = 0; retry < m_retry; retry++) {
+		ret = write_simple(buff, size);
+		switch (ret) {
+			case 0:
+				return 0;
+			case LIBUSB_ERROR_TIMEOUT:
+				continue;
+			default:
+				return ret;
+		}
+	}
+
+	return LIBUSB_ERROR_TIMEOUT;
+}
+
+int TransBase::read(void *buff, size_t size, size_t *return_size)
+{
+	int ret;
+
+	for (int retry = 0; retry < m_retry; retry++) {
+		ret = read_simple(buff, size, return_size);
+		switch (ret) {
+			case 0:
+				return 0;
+			case LIBUSB_ERROR_TIMEOUT:
+				continue;
+			default:
+				return ret;
+		}
+	}
+
+	return LIBUSB_ERROR_TIMEOUT;
+}
+
 int TransBase::read(vector<uint8_t> &buff)
 {
 	size_t size;
@@ -59,28 +98,35 @@ int TransBase::read(vector<uint8_t> &buff)
 int USBTrans::open(void *p)
 {
 	m_devhandle = p;
+	string_ex err;
+	int libusb_ret = 0;
 	libusb_device_handle * handle = (libusb_device_handle *)m_devhandle;
+
 	if (libusb_kernel_driver_active(handle, 0))
 	{
-		int ret = libusb_detach_kernel_driver((libusb_device_handle *)m_devhandle, 0);
-		if(ret <0 && ret != LIBUSB_ERROR_NOT_SUPPORTED)
+		libusb_ret = libusb_detach_kernel_driver((libusb_device_handle *)m_devhandle, 0);
+
+		if(libusb_ret < 0 && libusb_ret != LIBUSB_ERROR_NOT_SUPPORTED)
 		{
-			set_last_err_string("detach kernel driver failure");
-			return -1;
+			err.format("detach kernel driver failure (%d)", libusb_ret);
+			set_last_err_string(err);
+			return libusb_ret;
 		}
 	}
 
-	if (libusb_claim_interface(handle, 0))
+	if ((libusb_ret = libusb_claim_interface(handle, 0)))
 	{
-		set_last_err_string("Failure claim interface");
-		return -1;
+		err.format("Failure claim interface (%d)", libusb_ret);
+		set_last_err_string(err);
+		return libusb_ret;
 	}
 
 	libusb_config_descriptor *config;
-	if (libusb_get_active_config_descriptor(libusb_get_device(handle), &config))
+	if ((libusb_ret = libusb_get_active_config_descriptor(libusb_get_device(handle), &config)))
 	{
-		set_last_err_string("Can't get config descriptor");
-		return -1;
+		err.format("Can't get config descriptor (%d)", libusb_ret);
+		set_last_err_string(err);
+		return libusb_ret;
 	}
 
 	m_EPs.clear();
@@ -105,8 +151,10 @@ int USBTrans::close()
 
 int HIDTrans::open(void *p)
 {
-	if (USBTrans::open(p))
-		return -1;
+	int ret;
+
+	if ((ret = USBTrans::open(p)))
+		return ret;
 
 	for (const auto &ep : m_EPs)
 	{
@@ -117,7 +165,7 @@ int HIDTrans::open(void *p)
 	return 0;
 }
 
-int HIDTrans::write(void *buff, size_t size)
+int HIDTrans::write_simple(void *buff, size_t size)
 {
 	int ret;
 	uint8_t *p = (uint8_t *)buff;
@@ -150,9 +198,8 @@ int HIDTrans::write(void *buff, size_t size)
 
 	if (ret < 0)
 	{
-		string err;
-		err = "HID(W):";
-		err += libusb_error_name(ret);
+		string_ex err;
+		err.format("HID(W): %s (%d)", libusb_error_name(ret), ret);
 		set_last_err_string(err);
 		return ret;
 	}
@@ -160,7 +207,7 @@ int HIDTrans::write(void *buff, size_t size)
 	return ret;
 }
 
-int HIDTrans::read(void *buff, size_t size, size_t *rsize)
+int HIDTrans::read_simple(void *buff, size_t size, size_t *rsize)
 {
 	int ret;
 	int actual;
@@ -177,10 +224,8 @@ int HIDTrans::read(void *buff, size_t size, size_t *rsize)
 
 	if (ret < 0)
 	{
-		string error;
-		string err;
-		err = "HID(R):";
-		err += libusb_error_name(ret);
+		string_ex err;
+		err.format("HID(R): %s (%d)", libusb_error_name(ret), ret);
 		set_last_err_string(err);
 		return ret;
 	}
@@ -188,7 +233,7 @@ int HIDTrans::read(void *buff, size_t size, size_t *rsize)
 	return 0;
 }
 
-int BulkTrans::write(void *buff, size_t size)
+int BulkTrans::write_simple(void *buff, size_t size)
 {
 	int ret = 0;
 	int actual_length;
@@ -212,10 +257,8 @@ int BulkTrans::write(void *buff, size_t size)
 
 		if (ret < 0)
 		{
-			string error;
-			string err;
-			err = "Bulk(W):";
-			err += libusb_error_name(ret);
+			string_ex err;
+			err.format("Bulk(W): %s (%d)", libusb_error_name(ret), ret);
 			set_last_err_string(err);
 			return ret;
 		}
@@ -235,10 +278,8 @@ int BulkTrans::write(void *buff, size_t size)
 
 		if (ret < 0)
 		{
-			string error;
-			string err;
-			err = "Bulk(W):";
-			err += libusb_error_name(ret);
+			string_ex err;
+			err.format("Bulk(W): %s (%d)", libusb_error_name(ret), ret);
 			set_last_err_string(err);
 			return ret;
 		}
@@ -249,8 +290,10 @@ int BulkTrans::write(void *buff, size_t size)
 
 int BulkTrans::open(void *p)
 {
-	if (USBTrans::open(p))
-		return -1;
+	int ret;
+
+	if ((ret = USBTrans::open(p)))
+		return ret;
 
 	for (size_t i = 0; i < m_EPs.size(); i++)
 	{
@@ -264,7 +307,7 @@ int BulkTrans::open(void *p)
 	}
 	return 0;
 }
-int BulkTrans::read(void *buff, size_t size, size_t *rsize)
+int BulkTrans::read_simple(void *buff, size_t size, size_t *rsize)
 {
 	int ret;
 	int actual_length;
@@ -289,10 +332,8 @@ int BulkTrans::read(void *buff, size_t size, size_t *rsize)
 
 	if (ret < 0)
 	{
-		string error;
-		string err;
-		err = "Bulk(R):";
-		err += libusb_error_name(ret);
+		string_ex err;
+		err.format("Bulk(R): %s (%d)", libusb_error_name(ret), ret);
 		set_last_err_string(err);
 		return ret;
 	}
