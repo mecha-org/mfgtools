@@ -16,3 +16,5 @@ CMakeCache.txt
 node_modules
 build
 target
+*.bin
+*.out

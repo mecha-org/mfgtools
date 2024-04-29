@@ -1,9 +1,23 @@
+/* SplitLayout.css */
+.split-layout {
+    display: flex; /* Use Flexbox */
+    justify-content: space-between; /* Space between the columns */
+    align-items: stretch; /* Stretch columns to match height */
+
+}
+
+.left-column, .right-column {
+    flex: 1; /* Equal width for both columns */
+    padding: 20px; /* Add padding to the columns */
+}
+
 .u-flex {
     display: flex;
 }
 
 .u-row {
     flex-direction: row;
+    padding-bottom: 1rem;
 }
 .u-column {
     flex-direction: column;
@@ -27,7 +41,7 @@
 
 .link-container{
     display: inline-block;
-    width : 16rem;
+    width : 8rem;
 }
 
 .popup-loc {

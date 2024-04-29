@@ -1,7 +1,5 @@
 # uuu (Universal Update Utility), mfgtools 3.0
 
-[![Build status](https://ci.appveyor.com/api/projects/status/evp1xvj88ybuhfwi?svg=true)](https://ci.appveyor.com/project/nxpfrankli/mfgtools-kvqcg)
-
 [![macOS Build](https://github.com/nxp-imx/mfgtools/actions/workflows/macOS.yaml/badge.svg?branch=master)](https://github.com/nxp-imx/mfgtools/actions/workflows/macOS.yaml)
 [![Build with VS Studio](https://github.com/nxp-imx/mfgtools/actions/workflows/win.yaml/badge.svg)](https://github.com/nxp-imx/mfgtools/actions/workflows/win.yaml)
 [![Build for x64 ubuntu-lastest](https://github.com/nxp-imx/mfgtools/actions/workflows/build.yaml/badge.svg)](https://github.com/nxp-imx/mfgtools/actions/workflows/build.yaml)
@@ -45,8 +43,7 @@ Freescale/NXP I.MX Chip image deploy tools.
 
   uuu -b emmc u-boot.imx    write u-boot.imx to emmc boot partition. u-boot.imx need enable fastboot
 
-  uuu -b emmc_all u-boot.imx sdcard.bz2\*
-                            decompress sdcard.bz2 file and download the whole image into emmc
+  uuu -b emmc_all wic.zst   decompress wic.zst file and download the whole image into emmc
 ```
 
 # Prebuilt Image and pdf document
@@ -59,10 +56,8 @@ The prebuilt image and document are here:
 # How to Build:
 
 ## Windows
-- `git clone https://github.com/nxp-imx/mfgtools.git`
+- `git clone --recurse-submodules https://github.com/nxp-imx/mfgtools.git`
 - `cd mfgtools`
-- `git submodule init`
-- `git submodule update`
 - `open msvs/uuu.sln with Visual Studio 2017`
 
 Visual Studio
@@ -72,7 +67,7 @@ Note that, since uuu is an OSI compliant Open Source project, you are entitled t
 ## Linux
 - `git clone https://github.com/nxp-imx/mfgtools.git`
 - `cd mfgtools`
-- `sudo apt-get install libusb-1.0-0-dev libbz2-dev libzstd-dev pkg-config cmake libssl-dev g++`
+- `sudo apt-get install libusb-1.0-0-dev libbz2-dev libzstd-dev pkg-config cmake libssl-dev g++ zlib1g-dev libtinyxml2-dev`
 - `cmake . && make`
 
 The above commands build mfgtools in source. To build it out of source
@@ -87,7 +82,7 @@ For cmake prior 3.13:
 ## macOS
 - `git clone https://github.com/nxp-imx/mfgtools.git`
 - `cd mfgtools`
-- `brew install cmake libusb openssl pkg-config`
+- `brew install cmake libusb openssl pkg-config tinyxml2`
 - `cmake -DOPENSSL_ROOT_DIR=$(brew --prefix)/opt/openssl . && make`
 
 Note that we assume [brew](https://brew.sh) is installed and can be used to resolve dependencies as shown above. The remaining dependency `libbz2` can be resolved via the XCode supplied libraries.
@@ -112,3 +107,4 @@ The BSD licensed prebuilt Windows binary version of uuu is statically linked wit
  - zlib  (zlib license) is from https://github.com/madler/zlib.git
  - libusb (LGPL-2.1) is from  https://github.com/libusb/libusb.git
  - zstd (Dual BSD\GPLv2 Licenses) is from https://github.com/facebook/zstd
+ - tinyxml (zlib license) is from https://github.com/leethomason/tinyxml2

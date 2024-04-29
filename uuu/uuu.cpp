@@ -78,9 +78,12 @@ char g_sample_cmd_list[] = {
 };
 
 vector<string> g_usb_path_filter;
+vector<string> g_usb_serial_no_filter;
 
 int g_verbose = 0;
 static bool g_start_usb_transfer;
+
+bmap_mode g_bmap_mode = bmap_mode::Default;
 
 class AutoCursor
 {
@@ -173,7 +176,7 @@ int ask_passwd(char* prompt, char user[MAX_USER_LEN], char passwd[MAX_USER_LEN])
 void print_help(bool detail = false)
 {
 	const char help[] =
-		"uuu [-d -m -v -V] <" "bootloader|cmdlists|cmd" ">\n\n"
+		"uuu [-d -m -v -V -bmap -no-bmap] <" "bootloader|cmdlists|cmd" ">\n\n"
 		"    bootloader  download bootloader to board by usb\n"
 		"    cmdlist     run all commands in cmdlist file\n"
 		"                If it is path, search uuu.auto in dir\n"
@@ -183,8 +186,11 @@ void print_help(bool detail = false)
 		"    -d          Daemon mode, wait for forever.\n"
 		"    -v -V       verbose mode, -V enable libusb error\\warning info\n"
 		"    -dry        Dry run mode, check if script or cmd correct \n"
+		"    -bmap       Try using .bmap files even if flash commands do not specify them\n"
+		"    -no-bmap    Ignore .bmap files even if flash commands specify them\n"
 		"    -m          USBPATH Only monitor these paths.\n"
 		"                    -m 1:2 -m 1:3\n\n"
+		"    -ms         serial_no Monitor the serial number prefix of the device using 'serial_no'.\n"
 		"    -t          Timeout second for wait known usb device appeared\n"
 		"    -T          Timeout second for wait next known usb device appeared at stage switch\n"
 		"    -e          set environment variable key=value\n"
@@ -198,7 +204,7 @@ void print_help(bool detail = false)
 		"uuu -h          show general help\n"
 		"uuu -H          show general help and detailed help for commands\n\n";
 	printf("%s", help);
-	printf("uuu [-d -m -v] -b[run] ");
+	printf("uuu [-d -m -v -bmap -no-bmap] -b[run] ");
 	g_BuildScripts.ShowCmds();
 	printf(" arg...\n");
 	printf("\tRun Built-in scripts\n");
@@ -498,7 +504,7 @@ public:
 	{
 		string str;
 		str = m_dev;
-		str.resize(8, ' ');
+		str.resize(12, ' ');
 
 		string_ex s;
 		s.format("%2d/%2d", m_cmd_index+1, m_cmd_total);
@@ -510,7 +516,7 @@ public:
 	{
 		int width = get_console_width();
 		int info, bar;
-		info = 14;
+		info = 18;
 		bar = 40;
 
 		if (m_IsEmptyLine)
@@ -660,6 +666,13 @@ int progress(uuu_notify nt, void *p)
 				str += " at path ";
 				for (size_t i = 0; i < g_usb_path_filter.size(); i++)
 					str += g_usb_path_filter[i] + " ";
+			}
+
+			if (!g_usb_serial_no_filter.empty())
+			{
+				str += " at serial_no ";
+				for (auto it: g_usb_serial_no_filter)
+					str += it + "*";
 			}
 
 			print_oneline(str);
@@ -820,17 +833,17 @@ void print_udev()
 	fprintf(stderr, "\tsudo udevadm control --reload\n");
 }
 
-int print_usb_device(const char *path, const char *chip, const char *pro, uint16_t vid, uint16_t pid, uint16_t bcd, void * /*p*/)
+int print_usb_device(const char *path, const char *chip, const char *pro, uint16_t vid, uint16_t pid, uint16_t bcd, const char *serial_no, void * /*p*/)
 {
-	printf("\t%s\t %s\t %s\t 0x%04X\t0x%04X\t 0x%04X\n", path, chip, pro, vid, pid, bcd);
+	printf("\t%s\t %s\t %s\t 0x%04X\t0x%04X\t 0x%04X\t %s\n", path, chip, pro, vid, pid, bcd, serial_no);
 	return 0;
 }
 
 void print_lsusb()
 {
 	cout << "Connected Known USB Devices\n";
-	printf("\tPath\t Chip\t Pro\t Vid\t Pid\t BcdVersion\n");
-	printf("\t==================================================\n");
+	printf("\tPath\t Chip\t Pro\t Vid\t Pid\t BcdVersion\t Serial_no\n");
+	printf("\t====================================================================\n");
 
 	uuu_for_each_devices(print_usb_device, NULL);
 }
@@ -975,6 +988,12 @@ int main(int argc, char **argv)
 				uuu_add_usbpath_filter(argv[i]);
 				g_usb_path_filter.push_back(argv[i]);
 			}
+			else if (s == "-ms")
+			{
+				i++;
+				uuu_add_usbserial_no_filter(argv[i]);
+				g_usb_serial_no_filter.push_back(argv[i]);
+			}
 			else if (s == "-t")
 			{
 				i++;
@@ -998,6 +1017,14 @@ int main(int argc, char **argv)
 			else if (s == "-IgSerNum")
 			{
 				return set_ignore_serial_number();
+			}
+			else if (s == "-bmap")
+			{
+				g_bmap_mode = bmap_mode::Force;
+			}
+			else if (s == "-no-bmap")
+			{
+				g_bmap_mode = bmap_mode::Ignore;
 			}
 			else if (s == "-e")
 			{
@@ -1114,7 +1141,7 @@ int main(int argc, char **argv)
 	if (g_verbose)
 	{
 		printf("%sBuild in config:%s\n", g_vt_boldwhite, g_vt_default);
-		printf("\tPctl\t Chip\t\t Vid\t Pid\t BcdVersion\n");
+		printf("\tPctl\t Chip\t\t Vid\t Pid\t BcdVersion\t Serial_No\n");
 		printf("\t==================================================\n");
 		uuu_for_each_cfg(print_cfg, NULL);
 

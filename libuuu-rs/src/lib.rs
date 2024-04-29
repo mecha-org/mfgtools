@@ -40,6 +40,7 @@ pub fn run_command(cmd: &str, dry_run: i32) -> Result<i32> {
     let cmd_ptr: *const raw::c_char = cmd_str.as_ptr() as *const raw::c_char;
 
     let ret: raw::c_int = unsafe {
+        println!("running command");
         uuu_run_cmd(cmd_ptr, dry_run.into())
     };
 
@@ -67,50 +68,23 @@ extern fn collect_device(path: *const raw::c_char,
         println!("device");
         0.into()
 }
+
 pub fn get_devices() {
-    // let collect_device = |
-    //     | -> raw::c_int {
-    //         println!("device!");
-    //         0.into()
-    // };
-    // extern "C" {
-    //     pub fn uuu_for_each_devices(
-    //         fn_: uuu_ls_usb_devices,
-    //         p: *mut ::std::os::raw::c_void,
-    //     ) -> ::std::os::raw::c_int;
-    // }
     // let _ = unsafe {
     //     uuu_for_each_devices(Some(collect_device), null_mut())
     // };
 }
 
-// pub fn get_trustm_chipinfo() {
-//     let return_status: u32 = unsafe { _trustm_Open() }.into();
+extern fn notify(notify: uuu_notify, p: *mut raw::c_void) -> raw::c_int {
+        unsafe {
+            println!("notify type={:?}, status={:?}", notify.type_, notify.__bindgen_anon_1.status);
+        };
+    
+        0.into()
+}
 
-//     if return_status != OPTIGA_LIB_SUCCESS {
-//         println!("error opening trustm i2c interface");
-//     }
-
-//     println!("trustm open status {:?}", return_status);
-
-//     // let m_UID = ptr::null_mut();
-//     // let mut m: u32 = 2; 
-//     // let p_mut: *mut u32 = &mut m;
-
-//     let mut UID: utrustm_UID_t = utrustm_UID_t {
-//         b: [0; 27],
-//     };
-//     let m_UID: *mut utrustm_UID_t = &mut UID;
-
-//     let return_status: u32 = unsafe { trustm_readUID(m_UID) }.into();
-
-//     if return_status != OPTIGA_LIB_SUCCESS {
-//         println!("error reading trustm  UID");
-//     }
-
-//     println!("trustm read status {:?}", return_status);
-
-//     let UID: utrustm_UID_t = unsafe { *m_UID };
-
-//     println!("Chip Identifier is {:?}", unsafe { UID.st});
-// }
+pub fn register_notify_callback() {
+    unsafe {
+        uuu_register_notify_callback(Some(notify), null_mut());
+    }
+}
