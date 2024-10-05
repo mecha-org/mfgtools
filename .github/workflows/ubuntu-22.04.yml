@@ -1,0 +1,30 @@
+name: ubuntu-22.04 Development Environment
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04 # This uses GitHub's hosted Ubuntu runner
+    steps:
+      - uses: actions/checkout@v2
+      - name: Clone mfgtools repository
+        run: git clone https://github.com/shoaibmerchant/mfgtools.git
+        
+      - name: Install Rust 1.74
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.74.0
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: false
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
